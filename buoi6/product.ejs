@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Danh sách sản phẩm</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        .container {
+            max-width: 900px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h2 class="mb-3 text-center">Danh sách sản phẩm</h2>
+
+    <!-- Dropdown chọn danh mục -->
+    <div class="mb-3">
+        <label class="fw-bold">Lọc theo danh mục:</label>
+        <select class="form-select w-25" id="categoryFilter">
+            <option value="all" selected>Tất cả danh mục</option>
+            <% categories.forEach(category => { %>
+                <option value="<%= category.id %>"><%= category.name %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <!-- Bảng sản phẩm -->
+    <table class="table table-striped table-hover text-center">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Tên sản phẩm</th>
+                <th scope="col">Mô tả</th>
+                <th scope="col">Giá</th>
+                <th scope="col">Số lượng</th>
+                <th scope="col">Danh mục</th>
+            </tr>
+        </thead>
+        <tbody id="productTable">
+            <% if (products && products.length > 0) { %>
+                <% products.forEach((product, index) => { 
+                    let category = categories.find(c => c.id === product.category_id);
+                %>
+                <tr data-category="<%= product.category_id %>">
+                    <th scope="row"><%= index + 1 %></th>
+                    <td><%= product.name %></td>
+                    <td><%= product.description %></td>
+                    <td><%= product.price.toLocaleString("vi-VN") %> VND</td>
+                    <td><%= product.stock %></td>
+                    <td><%= category ? category.name : "Không xác định" %></td>
+                </tr>
+                <% }) %>
+            <% } else { %>
+                <tr>
+                    <td colspan="6" class="text-center">Không có sản phẩm nào</td>
+                </tr>
+            <% } %>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.getElementById("categoryFilter").addEventListener("change", function() {
+        let selectedCategory = this.value;
+        let rows = document.querySelectorAll("#productTable tr");
+
+        rows.forEach(row => {
+            row.style.display = (selectedCategory === "all" || row.getAttribute("data-category") === selectedCategory) 
+                ? "" 
+                : "none";
+        });
+    });
+</script>
+
+</body>
+</html>
