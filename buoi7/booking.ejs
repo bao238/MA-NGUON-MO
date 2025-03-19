@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Lịch Đặt Chỗ</title>
+    <link rel="stylesheet" href="/css/booking.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hệ Thống Quản Lý Lịch Đặt Chỗ</h1>
+        
+        <!-- Form đặt chỗ -->
+        <div class="booking-form">
+            <h2>Đặt Chỗ Mới</h2>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="customerName">Tên khách hàng:</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="date">Ngày:</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="time">Giờ:</label>
+                    <input type="time" id="time" required>
+                </div>
+                <button type="submit">Đặt chỗ</button>
+            </form>
+        </div>
+
+        <!-- Danh sách đặt chỗ -->
+        <div class="booking-list">
+            <h2>Danh Sách Đặt Chỗ</h2>
+            <table id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên khách hàng</th>
+                        <th>Ngày</th>
+                        <th>Giờ</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="navigation">
+            <a href="/" class="nav-button">Quay lại Trang Chủ</a>
+        </div>
+    </div>
+    <script>
+        // Các hàm helper
+        const getStatusColor = (status) => {
+            switch(status) {
+                case 'Pending': return 'status-pending';
+                case 'Confirmed': return 'status-confirmed';
+                case 'Cancelled': return 'status-cancelled';
+                default: return '';
+            }
+        };
+
+        // Lấy danh sách đặt chỗ
+        async function fetchBookings() {
+            try {
+                const response = await fetch('/booking/list');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const bookings = await response.json();
+                console.log('Nhận được danh sách bookings:', bookings);
+                displayBookings(bookings);
+            } catch (error) {
+                console.error('Chi tiết lỗi:', error);
+                alert(`Lỗi khi lấy danh sách đặt chỗ: ${error.message}`);
+            }
+        }
+
+        // Hiển thị danh sách đặt chỗ
+        function displayBookings(bookings) {
+            const tbody = document.querySelector('#bookingsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!Array.isArray(bookings)) {
+                console.error('Dữ liệu bookings không phải là mảng:', bookings);
+                return;
+            }
+
+            bookings.forEach(booking => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${booking.id}</td>
+                    <td>${booking.customerName}</td>
+                    <td>${booking.date}</td>
+                    <td>${booking.time}</td>
+                    <td class="${getStatusColor(booking.status)}">${booking.status}</td>
+                    <td class="action-buttons">
+                        ${booking.status === 'Pending' ? `
+                            <button onclick="updateStatus('${booking.id}', 'Confirmed')" class="confirm">Xác nhận</button>
+                            <button onclick="editBooking('${booking.id}', '${booking.customerName}', '${booking.date}', '${booking.time}')" class="edit">Sửa</button>
+                        ` : ''}
+                        ${booking.status !== 'Cancelled' ? `
+                            <button onclick="updateStatus('${booking.id}', 'Cancelled')" class="cancel">Hủy</button>
+                        ` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Thiết lập ngày tối thiểu cho input date
+        const dateInput = document.getElementById('date');
+        const timeInput = document.getElementById('time');
+        
+        function setMinDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const minDate = `${yyyy}-${mm}-${dd}`;
+            dateInput.min = minDate;
+        }
+        
+        setMinDate();
+
+        // Kiểm tra thời gian hợp lệ
+        function isValidDateTime(date, time) {
+            const now = new Date();
+            const selectedDateTime = new Date(`${date}T${time}`);
+            return selectedDateTime > now;
+        }
+
+        // Thêm hàm sửa đặt chỗ
+        function editBooking(id, customerName, date, time) {
+            // Điền thông tin vào form
+            document.getElementById('customerName').value = customerName;
+            document.getElementById('date').value = date;
+            document.getElementById('time').value = time;
+
+            // Thay đổi nút submit
+            const submitButton = document.querySelector('#bookingForm button[type="submit"]');
+            submitButton.textContent = 'Cập nhật';
+            
+            // Thêm ID vào form để biết đang sửa booking nào
+            document.getElementById('bookingForm').dataset.editId = id;
+
+            // Cuộn lên form
+            document.querySelector('.booking-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Sửa lại hàm xử lý form để hỗ trợ cả tạo mới và cập nhật
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                customerName: document.getElementById('customerName').value,
+                date: dateInput.value,
+                time: timeInput.value
+            };
+
+            // Kiểm tra thời gian trước khi gửi
+            if (!isValidDateTime(formData.date, formData.time)) {
+                alert('Không thể đặt chỗ trong quá khứ. Vui lòng chọn thời gian trong tương lai.');
+                return;
+            }
+
+            const editId = e.target.dataset.editId;
+            const isEditing = !!editId;
+
+            try {
+                const url = isEditing ? `/booking/update/${editId}` : '/booking/create';
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Lỗi khi xử lý đặt chỗ');
+                }
+
+                alert(isEditing ? 'Cập nhật đặt chỗ thành công!' : 'Đặt chỗ thành công!');
+                
+                // Reset form
+                document.getElementById('bookingForm').reset();
+                delete e.target.dataset.editId;
+                document.querySelector('#bookingForm button[type="submit"]').textContent = 'Đặt chỗ';
+                
+                await fetchBookings();
+            } catch (error) {
+                console.error('Lỗi:', error);
+                alert(error.message || 'Lỗi khi xử lý đặt chỗ');
+            }
+        });
+
+        // Cập nhật trạng thái đặt chỗ
+        async function updateStatus(id, status) {
+            console.log('Cập nhật trạng thái:', { id, status });
+            try {
+                let url = status === 'Cancelled' ? `/booking/cancel/${id}` : `/booking/update/${id}`;
+                let method = status === 'Cancelled' ? 'DELETE' : 'PUT';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                const data = await response.json();
+                console.log('Phản hồi từ server:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Lỗi khi cập nhật trạng thái');
+                }
+
+                alert('Cập nhật trạng thái thành công!');
+                await fetchBookings();
+            } catch (error) {
+                console.error('Lỗi:', error);
+                alert(error.message);
+            }
+        }
+
+        // Khởi tạo
+        fetchBookings();
+    </script>
+</body>
+</html>
