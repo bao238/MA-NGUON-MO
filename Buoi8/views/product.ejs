@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách sản phẩm</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <h1 style="color: red;">Danh sách sản phẩm</h1>
+
+    <label for="category">Lọc theo danh mục:</label>
+
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên sản phẩm</th>
+                <th>Mô tả</th>
+                <th>Danh mục</th>
+                <th>Giá</th>
+                <th>Số lượng tồn</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% products.forEach(product => { %>
+                <tr>
+                    <td><%= product.id %></td>
+                    <td><%= product.name %></td>
+                    <td><%= product.description %></td>
+                    <td><%= product.price %> VNĐ</td>
+                    <td><%= product.stock %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <script>
+        function filterCategory() {
+            const category = document.getElementById("category").value;
+            window.location.href = "/products?category=" + category;
+        }
+    </script>
+</body>
+</html>
